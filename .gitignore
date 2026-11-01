@@ -1,0 +1,130 @@
+# ==========================================
+# Dependencies
+# ==========================================
+node_modules/
+.pnp/
+.pnp.js
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ==========================================
+# Environment variables & secrets
+# ==========================================
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# ==========================================
+# Build outputs
+# ==========================================
+dist/
+build/
+out/
+.next/
+.expo/
+.expo-shared/
+
+# TypeScript
+*.tsbuildinfo
+
+# ==========================================
+# Expo / React Native
+# ==========================================
+web-build/
+expo-env.d.ts.tmp
+.metro-health-check*
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Expo generated native projects (if generated)
+# Remove these rules if you intentionally maintain native folders.
+apps/mobile/android/
+apps/mobile/ios/
+
+# ==========================================
+# Next.js
+# ==========================================
+apps/admin/.next/
+apps/admin/out/
+
+# ==========================================
+# Logs
+# ==========================================
+logs/
+*.log
+
+# ==========================================
+# Coverage & test outputs
+# ==========================================
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# ==========================================
+# Cache
+# ==========================================
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+*.swp
+*.swo
+
+# ==========================================
+# Local databases & temporary files
+# ==========================================
+*.sqlite
+*.sqlite3
+*.db
+tmp/
+temp/
+
+# ==========================================
+# IDEs & editors
+# ==========================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ==========================================
+# Operating system
+# ==========================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==========================================
+# Deployment & local tooling
+# ==========================================
+.vercel/
+.netlify/
+.serverless/
+
+# ==========================================
+# Supabase local development
+# ==========================================
+# Keep migrations, configuration, and seed files tracked.
+# Ignore only local temporary state.
+supabase/.temp/
+
+# ==========================================
+# Generated files
+# ==========================================
+*.generated.ts
+*.generated.tsx
+*.generated.js
