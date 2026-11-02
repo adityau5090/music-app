@@ -1,82 +1,84 @@
-import { useEffect } from "react";
-import { View, ActivityIndicator } from "react-native";
-import { Tabs, router } from "expo-router";
-import { useAuth } from "../../context/auth.context";
 
-export default function TabsLayout() {
-  const { user, loading } = useAuth();
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { View } from "react-native";
+import MiniPlayer from "../../components/MiniPlayer";
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/(auth)/login");
-    }
-  }, [user, loading]);
-
-  if (loading || !user) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "#101010",
-          justifyContent: "center",
-          alignItems: "center",
+export default function TabLayout() {
+  return (
+    <View style={{ flex: 1, backgroundColor: "#111" }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: "#e11d48",
+          tabBarInactiveTintColor: "#888",
+          tabBarStyle: {
+            height: 65,
+            backgroundColor: "#181818",
+            borderTopColor: "#292929",
+            borderTopWidth: 1,
+            paddingTop: 8,
+            paddingBottom: 8,
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: "600",
+          },
         }}
       >
-        <ActivityIndicator color="#1ed760" size="large" />
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="home" size={size} color={color} />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="search"
+          options={{
+            title: "Search",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="search" size={size} color={color} />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="library"
+          options={{
+            title: "Library",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="library" size={size} color={color} />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="person" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
+
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          bottom: 65,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+        }}
+      >
+        <MiniPlayer />
       </View>
-    );
-  }
-
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#181818",
-          borderTopColor: "#282828",
-          height: 65,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarActiveTintColor: "#1ed760",
-        tabBarInactiveTintColor: "#888",
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarLabel: "Home",
-        }}
-      />
-
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: "Search",
-          tabBarLabel: "Search",
-        }}
-      />
-
-      <Tabs.Screen
-        name="library"
-        options={{
-          title: "Library",
-          tabBarLabel: "Library",
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarLabel: "Profile",
-        }}
-      />
-    </Tabs>
+    </View>
   );
 }

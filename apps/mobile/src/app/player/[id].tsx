@@ -1,8 +1,7 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Pressable,
   StyleSheet,
@@ -10,103 +9,64 @@ import {
   View,
 } from "react-native";
 import Slider from "@react-native-community/slider";
-import { useLocalSearchParams, Stack } from "expo-router";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { Stack, useLocalSearchParams } from "expo-router";
 
-import { getPlaybackUrl } from "../../services/playback.service";
-import { supabase } from "../../lib/supabase";
+import { usePlayback } from "../../context/playback.context";
+import LikeButton from "@/components/LikeButton";
+import { useRouter } from "expo-router";
 
 export default function PlayerScreen() {
+  const router = useRouter();
+
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const player = useAudioPlayer(null);
-  const status = useAudioPlayerStatus(player);
-
-  const [track, setTrack] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    track,
+  loading,
+  error,
+  status,
+  loadTrack,
+  togglePlayback,
+  seekTo,
+  playNext,
+  playPrevious,
+  shuffle,
+  toggleShuffle,
+  repeatMode,
+  cycleRepeatMode,
+  queue
+  } = usePlayback();
 
   useEffect(() => {
-    let cancelled = false;
+    if (!id) return;
 
-    async function loadTrack() {
-      try {
-        setLoading(true);
-        setError(null);
+  if (track?.id === id) return;
 
-        const result = await getPlaybackUrl(id);
+  // Only load the route track when no queue is active.
+  if (queue.length > 1) return;
 
-        if (cancelled) return;
-
-        const coverStoragePath = (
-          result.track as typeof result.track & {
-            cover_storage_path?: string | null;
-          }
-        ).cover_storage_path;
-
-        setTrack({
-          ...result.track,
-          coverUrl: result.track.cover_storage_path
-            ? supabase.storage
-                .from("covers")
-                .getPublicUrl(result.track.cover_storage_path).data.publicUrl
-            : null,
-        });
-
-        player.replace({ uri: result.playbackUrl });
-        player.play();
-      } catch (err) {
-        if (!cancelled) {
-          const message =
-            err instanceof Error ? err.message : "Unable to load track";
-
-          setError(message);
-          Alert.alert("Playback error", message);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    if (id) loadTrack();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, player]);
+  loadTrack(id);
+  }, [id]);
 
   const formatTime = (seconds: number) => {
-    if (!Number.isFinite(seconds)) return "0:00";
-
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-
     return `${mins}:${String(secs).padStart(2, "0")}`;
   };
 
-  const togglePlayback = () => {
-    if (status.playing) {
-      player.pause();
-    } else {
-      player.play();
-    }
-  };
-
-  if (loading) {
+  if (!track) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#e11d48" />
-        <Text style={styles.message}>Loading your music...</Text>
+        <Text style={styles.artist}>Loading music...</Text>
       </View>
     );
   }
 
-  if (error || !track) {
+  if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.message}>
-          {error || "Track not found"}
-        </Text>
+        <Text style={styles.artist}>{error}</Text>
       </View>
     );
   }
@@ -119,70 +79,82 @@ export default function PlayerScreen() {
       <Stack.Screen options={{ title: "Now Playing" }} />
 
       <View style={styles.container}>
-        <View style={styles.coverContainer}>
-          {track.coverUrl ? (
-            <Image
-              source={{ uri: track.coverUrl }}
-              style={styles.cover}
-            />
-          ) : (
-            <View style={[styles.cover, styles.placeholder]}>
-              <Text style={styles.placeholderText}>♪</Text>
-            </View>
-          )}
-        </View>
+        {track.coverUrl ? (
+          <Image source={{ uri: track.coverUrl }} style={styles.cover} />
+        ) : (
+          <View style={[styles.cover, styles.placeholder]}>
+            <Text style={styles.placeholderIcon}>♪</Text>
+          </View>
+        )}
 
         <View style={styles.trackInfo}>
           <Text style={styles.title}>{track.title}</Text>
           <Text style={styles.artist}>
             {track.artist || "Unknown Artist"}
           </Text>
+          <LikeButton trackId={track.id} />
         </View>
 
         {status.isBuffering && (
           <Text style={styles.buffering}>Buffering...</Text>
         )}
 
-        <View style={styles.progressContainer}>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={Math.max(duration, 1)}
-            value={Math.min(currentTime, duration || 0)}
-            minimumTrackTintColor="#e11d48"
-            maximumTrackTintColor="#444"
-            thumbTintColor="#e11d48"
-            onSlidingComplete={(value) => player.seekTo(value)}
-            disabled={!status.isLoaded || duration <= 0}
-          />
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={Math.max(duration, 1)}
+          value={Math.min(currentTime, duration)}
+          minimumTrackTintColor="#e11d48"
+          maximumTrackTintColor="#444"
+          thumbTintColor="#e11d48"
+          onSlidingComplete={seekTo}
+          disabled={!status.isLoaded || duration <= 0}
+        />
 
-          <View style={styles.timeRow}>
-            <Text style={styles.time}>{formatTime(currentTime)}</Text>
-            <Text style={styles.time}>{formatTime(duration)}</Text>
-          </View>
+        <View style={styles.timeRow}>
+          <Text style={styles.artist}>{formatTime(currentTime)}</Text>
+          <Text style={styles.artist}>{formatTime(duration)}</Text>
         </View>
 
-        <View style={styles.controls}>
-          <Pressable onPress={() => player.seekTo(Math.max(0, currentTime - 10))}>
-            <Text style={styles.skip}>-10</Text>
-          </Pressable>
+        {/* Shuffle and Repeat */}
+<View style={styles.extraControls}>
+  <Pressable onPress={toggleShuffle}>
+    <Text style={[styles.modeButton, shuffle && styles.activeMode]}>
+      ⇄
+    </Text>
+  </Pressable>
 
-          <Pressable
-            style={styles.playButton}
-            onPress={togglePlayback}
-            disabled={!status.isLoaded}
-          >
-            <Text style={styles.playIcon}>
-              {status.playing ? "Ⅱ" : "▶"}
-            </Text>
-          </Pressable>
+  <Pressable onPress={cycleRepeatMode}>
+    <Text
+      style={[
+        styles.modeButton,
+        repeatMode !== "off" && styles.activeMode,
+      ]}
+    >
+      {repeatMode === "one" ? "↻¹" : "↻"}
+    </Text>
+  </Pressable>
+</View>
+<Pressable onPress={() => router.push("/queue")}>
+  <Text style={styles.modeButton}>☷</Text>
+</Pressable>
 
-          <Pressable
-            onPress={() => player.seekTo(Math.min(duration, currentTime + 10))}
-          >
-            <Text style={styles.skip}>+10</Text>
-          </Pressable>
-        </View>
+{/* Previous, Play/Pause, Next */}
+<View style={styles.controls}>
+  <Pressable onPress={() => playPrevious()}>
+    <Text style={styles.skip}>|◀</Text>
+  </Pressable>
+
+  <Pressable style={styles.playButton} onPress={togglePlayback}>
+    <Text style={styles.playIcon}>
+      {status.playing ? "Ⅱ" : "▶"}
+    </Text>
+  </Pressable>
+
+  <Pressable onPress={() => playNext()}>
+    <Text style={styles.skip}>▶|</Text>
+  </Pressable>
+</View>
       </View>
     </>
   );
@@ -201,34 +173,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    padding: 24,
-  },
-  message: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  coverContainer: {
-    alignItems: "center",
-    marginBottom: 40,
   },
   cover: {
     width: "100%",
     aspectRatio: 1,
     maxWidth: 340,
+    alignSelf: "center",
     borderRadius: 18,
+    marginBottom: 38,
   },
   placeholder: {
     backgroundColor: "#292929",
     alignItems: "center",
     justifyContent: "center",
   },
-  placeholderText: {
+  placeholderIcon: {
     color: "#e11d48",
     fontSize: 100,
   },
   trackInfo: {
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 22,
   },
   title: {
     color: "#fff",
@@ -237,14 +202,10 @@ const styles = StyleSheet.create({
   },
   artist: {
     color: "#aaa",
-    fontSize: 16,
+    fontSize: 14,
   },
   buffering: {
     color: "#e11d48",
-    marginBottom: 8,
-  },
-  progressContainer: {
-    marginBottom: 24,
   },
   slider: {
     width: "100%",
@@ -254,16 +215,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  time: {
-    color: "#aaa",
-    fontSize: 12,
-  },
   controls: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 48,
+    marginTop: 28,
   },
+  extraControls: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  paddingHorizontal: 35,
+  marginTop: 18,
+},
+modeButton: {
+  color: "#888",
+  fontSize: 25,
+},
+activeMode: {
+  color: "#e11d48",
+},
   playButton: {
     width: 68,
     height: 68,

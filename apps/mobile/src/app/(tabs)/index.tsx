@@ -1,94 +1,164 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 
+import TrackCard from "../../components/TrackCard";
+import { getTracks, Track } from "../../services/track.service";
+import { usePlayback } from "../../context/playback.context";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { loadTrack } = usePlayback();
+
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const fetchTracks = useCallback(async () => {
+    try {
+      setError("");
+      const result = await getTracks(1);
+      setTracks(result.tracks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTracks();
+  }, [fetchTracks]);
+
+  async function handlePlay(track: Track) {
+    try {
+      setPlayingId(track.id);
+      await loadTrack(track.id);
+      router.push(`/player/${track.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to play track");
+    } finally {
+      setPlayingId(null);
+    }
+  }
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.greeting}>Good evening 👋</Text>
-
-      <Text style={styles.heading}>Welcome to Melody</Text>
-
-      <Text style={styles.subtitle}>
-        Your music. Your mood. Your world.
-      </Text>
-
-      <Text style={styles.sectionTitle}>Recently Played</Text>
-      <Pressable
-        onPress={() =>
-          router.push({
-            pathname: "/player/[id]" as any,
-            params: { id: "52469848-dfae-4a48-bbd8-c84354c97bf6" },
-          } as any)
+    <View style={styles.container}>
+      <FlatList
+        data={tracks}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchTracks();
+            }}
+            tintColor="#e11d48"
+          />
         }
-      >
-        <Text style={{ color: "white", fontSize: 18 }}>
-          ▶ Play Low Fade
-        </Text>
-      </Pressable>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Your music journey starts here 🎵</Text>
-        <Text style={styles.cardSubtitle}>
-          Your recently played tracks will appear here.
-        </Text>
-      </View>
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.greeting}>YOUR SOUND. YOUR WORLD.</Text>
+            <Text style={styles.heading}>Good music,</Text>
+            <Text style={styles.heading}>good mood.</Text>
 
-      <Text style={styles.sectionTitle}>Made for You</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Discover your next favourite</Text>
-        <Text style={styles.cardSubtitle}>
-          Personalized recommendations will appear here.
-        </Text>
-      </View>
-    </ScrollView>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recently added</Text>
+              <Text style={styles.count}>{tracks.length} tracks</Text>
+            </View>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <TrackCard
+            track={item}
+            loading={playingId === item.id}
+            onPress={() => handlePlay(item)}
+          />
+        )}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            {loading ? (
+              <ActivityIndicator color="#e11d48" size="large" />
+            ) : (
+              <Text style={styles.message}>
+                {error || "No music uploaded yet."}
+              </Text>
+            )}
+          </View>
+        }
+        ListFooterComponent={
+          error && tracks.length > 0 ? (
+            <Text style={styles.error}>{error}</Text>
+          ) : null
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#101010",
-    padding: 22,
+    backgroundColor: "#111",
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 150,
+  },
+  header: {
+    marginBottom: 18,
   },
   greeting: {
-    color: "#aaa",
-    fontSize: 15,
-    marginTop: 25,
+    color: "#e11d48",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
+    marginBottom: 12,
   },
   heading: {
     color: "#fff",
-    fontSize: 29,
-    fontWeight: "bold",
-    marginTop: 10,
+    fontSize: 32,
+    fontWeight: "800",
   },
-  subtitle: {
-    color: "#999",
-    marginTop: 8,
-    fontSize: 14,
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 34,
+    marginBottom: 12,
   },
   sectionTitle: {
     color: "#fff",
     fontSize: 20,
-    fontWeight: "bold",
-    marginTop: 35,
-    marginBottom: 15,
+    fontWeight: "700",
   },
-  card: {
-    backgroundColor: "#202020",
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 12,
+  count: {
+    color: "#888",
+    fontSize: 12,
   },
-  cardTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  empty: {
+    paddingTop: 50,
+    alignItems: "center",
   },
-  cardSubtitle: {
-    color: "#999",
-    fontSize: 13,
-    marginTop: 8,
+  message: {
+    color: "#aaa",
+  },
+  error: {
+    color: "#f87171",
+    marginTop: 12,
   },
 });
