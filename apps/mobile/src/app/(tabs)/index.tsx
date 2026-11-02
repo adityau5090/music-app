@@ -1,6 +1,9 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import { useRouter } from "expo-router";
+
 
 export default function HomeScreen() {
+  const router = useRouter();
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.greeting}>Good evening 👋</Text>
@@ -12,7 +15,18 @@ export default function HomeScreen() {
       </Text>
 
       <Text style={styles.sectionTitle}>Recently Played</Text>
-
+      <Pressable
+        onPress={() =>
+          router.push({
+            pathname: "/player/[id]" as any,
+            params: { id: "52469848-dfae-4a48-bbd8-c84354c97bf6" },
+          } as any)
+        }
+      >
+        <Text style={{ color: "white", fontSize: 18 }}>
+          ▶ Play Low Fade
+        </Text>
+      </Pressable>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Your music journey starts here 🎵</Text>
         <Text style={styles.cardSubtitle}>

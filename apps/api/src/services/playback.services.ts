@@ -6,7 +6,7 @@ export async function generatePlaybackUrl(trackId: string) {
   // Find the requested active track
   const { data: track, error: trackError } = await supabaseAdmin
     .from("tracks")
-    .select("id, title, artist, audio_storage_path, duration_seconds")
+    .select("id, title, artist, audio_storage_path, cover_storage_path, duration_seconds")
     .eq("id", trackId)
     .eq("is_active", true)
     .maybeSingle();
@@ -30,6 +30,7 @@ export async function generatePlaybackUrl(trackId: string) {
       title: track.title,
       artist: track.artist,
       duration_seconds: track.duration_seconds,
+      cover_storage_path: track.cover_storage_path,
     },
     playbackUrl: data.signedUrl,
     expiresIn: SIGNED_URL_EXPIRY,
